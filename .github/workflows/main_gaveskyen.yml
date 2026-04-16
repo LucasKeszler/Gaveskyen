@@ -1,0 +1,54 @@
+name: Build and deploy JAR app to Azure Web App - Gaveskyen
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java version
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Build with Maven
+        run: mvn -B clean package
+
+      - name: Upload artifact for deployment job
+        uses: actions/upload-artifact@v4
+        with:
+          name: java-app
+          path: target/*.jar
+
+  deploy:
+    runs-on: windows-latest
+    needs: build
+
+    steps:
+      - name: Download artifact from build job
+        uses: actions/download-artifact@v4
+        with:
+          name: java-app
+
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_69CC1D6816744767BAEF3F2BF5703C7A }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_A99ABDD291244F7090F6CFC05831C375 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_44DF0B380AA9430BB2055B0263746E63 }}
+
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: 'Gaveskyen'
+          slot-name: 'Production'
+          package: target/*.jar
